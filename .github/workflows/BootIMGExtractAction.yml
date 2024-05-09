@@ -1,51 +1,60 @@
-name: 提取 boot / init_boot.img
+name: extract_partition
 
 on:
   workflow_dispatch:
     inputs:
+      boot:
+        description: '是否提取 boot 分区？'
+        required: false
+        default: false
+        type: boolean
+      init_boot:
+        description: '是否提取 init_boot 分区？'
+        required: false
+        default: false
+        type: boolean
       rom_url:
         description: 'ROM 下载直链'
         required: true
-        default: 'https://mirrorbits.lineageos.org/full/tissot/20230425/lineage-19.1-20230425-nightly-tissot-signed.zip'
-
+        default: 'https://cdnorg.d.miui.com/OS1.0.3.0.UNOCNXM/miui_ZIRCON_OS1.0.3.0.UNOCNXM_e09092107e_14.0.zip'
 
 jobs:
-  YIJIANTIQU:
+  extract_partition:
     runs-on: ubuntu-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v2
-
+      
       - name: 安装依赖
         run: |
-          sudo apt-get update
-          sudo apt-get -y install python3-pip
-          sudo apt install aria2 liblzma-dev brotli lz4
-          pip3 install backports.lzma pycrypto
-          pip install protobuf==3.20
-          BUILD_TIME=$(TZ=Asia/Shanghai date +"%m%d%H%M")
-          echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+          sudo apt-get update && sudo apt-get -y install python3 python3-pip
+          sudo pip3 install bsdiff4 enlighten protobuf==3.20 httpx
+          git clone --single-branch --depth=1 https://github.com/5ec1cff/payload-dumper ~/payload-dumper_temp
+          mv ~/payload-dumper_temp/payload_dumper ~/payload-dumper
+          rm -rf ~/payload-dumper_temp
 
-      - name: 提取镜像并上传至 TMP
+      - name: 提取镜像
         run: |
-          cd ~
-          git clone --recurse-submodules https://github.com/tosasitill/Firmware_extractor.git
-          cd Firmware_extractor
-          aria2c -s 10 -x 10 -d . -o firmware.zip "${{ github.event.inputs.rom_url }}"
-          ./extractor.sh firmware.zip
-          cd ${{ github.workspace }}
-          touch info.md
-          echo "提交日期：$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')" >> info.md
-          echo "ROM 下载直链：${{ github.event.inputs.rom_url }}" >> info.md
-          cd ~/Firmware_extractor/out
-          if [ -f "init_boot.img" ]; then rm boot.img; fi
-          du -h --total *.img | sed 's/^/提取镜像大小： /' | head -n 1 >> ${{ github.workspace }}/info.md
+          partitions=""
+          if [ "${{ github.event.inputs.boot }}" == "true" ]; then partitions="$partitions,boot"; fi
+          if [ "${{ github.event.inputs.init_boot }}" == "true" ]; then partitions="$partitions,init_boot"; fi
+          if [ -z "$partitions" ]; then echo "请选择至少一个分区类型！"; exit 1; fi
+          cd ~ && python3 ~/payload-dumper/dumper.py --partitions "${partitions:1}" ${{ github.event.inputs.rom_url }}
+
+      - name: 生成信息文件
+        run: |
+          cd ~/output
+          echo "提交日期：$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')" >> ${{ github.workspace }}/info.md
+          echo "ROM 下载直链：${{ github.event.inputs.rom_url }}" >> ${{ github.workspace }}/info.md
+          echo "提取的镜像大小：" >> ${{ github.workspace }}/info.md
+          for img_file in *.img; do
+            echo "$(du -h "$img_file" | awk '{print $1}') $img_file" >> ${{ github.workspace }}/info.md
+          done
 
       - name: 上传镜像及相关信息
         uses: ncipollo/release-action@v1.12.0
         with:
-            artifacts: "~/Firmware_extractor/out/*"
+            artifacts: "~/output/*"
             bodyfile: "${{ github.workspace }}/info.md"
             tag: "OUTPUT_${{ env.BUILD_TIME }}_${{ github.run_id }}"
             token: ${{ secrets.GITHUB_TOKEN }}
-
