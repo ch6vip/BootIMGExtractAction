@@ -1,29 +1,30 @@
-![image](./info.png)
-
 # BootIMGExtractAction
 
-This action extracts boot.img / init_boot.img from a ROM and uploads them to the Releases section.
+**使用 Github Actions 来提取 Android Rom 内的 boot/init_boot 文件，并上传到 Github Releases**
 
----
+## 🔧 使用
 
-English | [简体中文](./README_CN.md)
+1. **创建**：
+   - 点击 `Fork` 按钮，创建本项目的个人仓库
 
-## Usage
+2. **配置**：
+   - 在 Fork 后的仓库页面中，点击 `Actions` 选项
+   - 选择 `extract_partition` 工作流
+   - 根据提示选择你想要提取的文件，并确保正确填写了 ROM 的下载直链
 
-1. Fork this repository.
-2. In the Actions tab, select either 'boot' or 'init_boot', and provide the direct download link to your ROM.
-3. Click on "Run workflow" and wait for the process to complete.
+3. **运行**：
+   - 确认所有信息都已经正确填写后，点击 `Run workflow` 按钮开始运行
 
-**If you encounter a "403 Forbidden" error, go to Settings > Actions > General > Workflow permissions and adjust it to "Read and write permissions".**
+## 🚨 注意事项
 
-**This project only supports 'Recovery ROM'.**
+- 如果在上传镜像时遇到 `Error 403: Resource not accessible by integration` 错误，请前往 `Settings` -> `Actions` -> `General` -> `Workflow permissions`，并将权限设置为`Read and write permissions`
 
-**To ensure functionality, add a secret named 'app_token' in your personal repository's Settings > Secrets > Actions. Set its value to 'TMP'.**
+## 🙏 感谢
 
-## Others
+- 特别感谢 [tosasitill](https://github.com/tosasitill) 和 [5ec1cff](https://github.com/5ec1cff)
 
-Special thanks to [tosasitill](https://github.com/tosasitill) and [5ec1cff](https://github.com/5ec1cff).
+- 本项目依赖于 [payload-dumper](https://github.com/5ec1cff/payload-dumper)
 
-This project relies on [payload-dumper](https://github.com/5ec1cff/payload-dumper).
+## 📜 许可证
 
-Tested on: May 9, 2024
+本项目采用 [GPL-3.0 License](LICENSE)
